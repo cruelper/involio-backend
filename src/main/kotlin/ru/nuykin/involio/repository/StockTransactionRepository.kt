@@ -1,0 +1,11 @@
+package ru.nuykin.involio.repository
+
+import org.springframework.data.repository.CrudRepository
+import org.springframework.stereotype.Repository
+import ru.nuykin.involio.model.StockTransaction
+import ru.nuykin.involio.model.StockTransactionId
+
+
+@Repository
+interface StockTransactionRepository : CrudRepository<StockTransaction, StockTransactionId> {
+}

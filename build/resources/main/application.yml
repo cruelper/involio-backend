@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/involio_db
+    username: root
+    password: "zxcvbnm1423"
+  jpa:
+    properties:
+      hibernate:
+        ddl-auto: update
+        hbm2ddl:
+          auto: update
+        naming:
+          implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+          physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        dialect: org.hibernate.dialect.PostgreSQL95Dialect
+        show_sql: true
+        temp:
+          use_jdbc_metadata_defaults: false
+    database: postgresql
+
+jwt:
+  sessionTime: 120000000
+  secret: secret_key
+
