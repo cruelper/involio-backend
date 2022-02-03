@@ -6,7 +6,7 @@ import javax.persistence.*
 @Table(name = "table_currency")
 class Currency {
     @Id
-    var id_currency: String? = null
+    var idCurrency: String? = null
 
     @OneToMany(mappedBy = "id_currency", fetch = FetchType.EAGER)
     var company: Collection<Company>? = null
@@ -14,14 +14,22 @@ class Currency {
     @OneToMany(mappedBy = "trading_currency", fetch = FetchType.EAGER)
     var currency_to_stock: Collection<Stock>? = null
 
-    @OneToMany(mappedBy = "currency_in_transaction", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "currencyInTransaction", fetch = FetchType.LAZY)
     var currency_in_transaction: Collection<CurrencyTransaction>? = null
 
     @Column
     var name_currency: String? = null
 
-    constructor(id: String, name: String){
-        this.id_currency = id
+    @Column
+    var sign_currency: Char? = null
+
+    @Column
+    var id_on_yahoo_api: String? = null
+
+    constructor(id: String, name: String, sign: Char, id_on_yahoo_api: String){
+        this.idCurrency = id
         this.name_currency = name
+        this.sign_currency = sign
+        this.id_on_yahoo_api = id_on_yahoo_api
     }
 }

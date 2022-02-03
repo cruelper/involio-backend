@@ -17,7 +17,12 @@ class CompanyService{
             isin = company.isin!!,
             nameCompany = company.nameCompany!!,
             description = company.description!!,
-            currency = CurrencyDto(company.id_currency!!.id_currency!!, company.id_currency!!.name_currency!!),
+            currency = CurrencyDto(
+                company.id_currency!!.idCurrency!!,
+                company.id_currency!!.name_currency!!,
+                company.id_currency!!.sign_currency!!,
+                company.id_currency!!.id_on_yahoo_api!!
+            ),
             country = CountryDto(company.country!!.id_country!!, company.country!!.name_country!!),
             branch = company.branch!!.toList().map { BranchDto(it.idBranch!!, it.nameBranch!!) },
             sector = company.sector!!.toList().map { SectorDto(it.id_sector!!, it.name_sector!!) },

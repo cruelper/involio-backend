@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 
 import org.springframework.web.bind.annotation.RestController
+import ru.nuykin.involio.dto.MyUserDto
 import ru.nuykin.involio.model.Branch
 import ru.nuykin.involio.model.MyUser
 import ru.nuykin.involio.repository.BranchRepository
@@ -42,9 +43,9 @@ class HelloController {
         return "Admin"
     }
 
-    @GetMapping("/getall")
-    @ApiOperation("(Убрать) Получить всех юзеров")
-    fun getall(): List<MyUser?> = dao!!.findAll().toList()
+//    @GetMapping("/getall")
+//    @ApiOperation("(Убрать) Получить всех юзеров")
+//    fun getall(): List<MyUserDto> = dao!!.findAll().toList().map { MyUserDto(it.email!!, it.login!!, it.password!!) }
 
     @GetMapping("/add-data")
     fun add_data(): List<Branch?> =

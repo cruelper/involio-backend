@@ -1,7 +1,6 @@
 package ru.nuykin.involio.model
 
-import java.io.Serializable
-import java.util.*
+import java.sql.*
 import javax.persistence.*
 
 @Entity
@@ -38,10 +37,10 @@ class InvestmentPortfolio {
     @OneToMany(mappedBy = "portfolio_to_composition", fetch = FetchType.LAZY)
     var composition_of_portfolio: Collection<CurrentPortfolioComposition>? = null
 
-    @OneToMany(mappedBy = "investment_portfolio_in_stock_transaction", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "investmentPortfolioInStockTransaction", fetch = FetchType.LAZY)
     var stock_transaction_of_portfolio: Collection<StockTransaction>? = null
 
-    @OneToMany(mappedBy = "investment_portfolio_in_currency_transaction", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "investmentPortfolioInCurrencyTransaction", fetch = FetchType.LAZY)
     var currency_transaction_of_portfolio: Collection<CurrencyTransaction>? = null
 
 

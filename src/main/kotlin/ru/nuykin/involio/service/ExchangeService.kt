@@ -13,16 +13,15 @@ class ExchangeService{
     private val exchangeDao: ExchangeRepository? = null
 
     fun getAllExchange(): List<ExchangeDto> =
-        exchangeDao!!.findAll().toList().map { ExchangeDto(it.id_exchange!!, it.name_exchange!!) }
+        exchangeDao!!.findAll().toList().map { ExchangeDto(it.id_exchange, it.name_exchange!!) }
 
     fun getDtoExchangeById(id: Int): ExchangeDto? {
         val exchange: Exchange? = exchangeDao!!.findByIdOrNull(id)
-        return if(exchange == null) null else ExchangeDto(exchange.id_exchange!!, exchange.name_exchange!!)
+        return if(exchange == null) null else ExchangeDto(exchange.id_exchange, exchange.name_exchange!!)
     }
 
     fun getExchangeById(id: Int): Exchange? {
-        val exchange: Exchange? = exchangeDao!!.findByIdOrNull(id)
-        return if(exchange == null) null else exchange
+        return exchangeDao!!.findByIdOrNull(id)
     }
 
     fun addExchange(exchangeDto: ExchangeDto){

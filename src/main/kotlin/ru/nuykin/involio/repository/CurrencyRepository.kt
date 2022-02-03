@@ -7,4 +7,6 @@ import ru.nuykin.involio.model.Currency
 
 @Repository
 interface CurrencyRepository : CrudRepository<Currency, String> {
+    fun findByIdCurrencyContainingIgnoreCase(id: String): List<Currency>
+
 }

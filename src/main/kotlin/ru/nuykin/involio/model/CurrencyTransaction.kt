@@ -1,7 +1,7 @@
 package ru.nuykin.involio.model
 
 import java.io.Serializable
-import java.util.*
+import java.sql.*
 import javax.persistence.*
 
 @Entity
@@ -13,11 +13,11 @@ class CurrencyTransaction {
     @Id
     @ManyToOne(optional = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "id_investment_portfolio")
-    var investment_portfolio_in_currency_transaction: InvestmentPortfolio? = null
+    var investmentPortfolioInCurrencyTransaction: InvestmentPortfolio? = null
     @Id
     @ManyToOne(optional = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "id_currency")
-    var currency_in_transaction: Currency? = null
+    var currencyInTransaction: Currency? = null
 
     @Column
     var item_count: Int? = null
@@ -42,8 +42,8 @@ class CurrencyTransaction {
         date_transaction: Date,
         broker_commission: Double
     ) {
-        this.investment_portfolio_in_currency_transaction = investment_portfolio
-        this.currency_in_transaction = currency
+        this.investmentPortfolioInCurrencyTransaction = investment_portfolio
+        this.currencyInTransaction = currency
         this.item_count = item_count
         this.unit_cost = unit_cost
         this.sale_or_purchase = sale_or_purchase
@@ -54,12 +54,12 @@ class CurrencyTransaction {
 
 class CurrencyTransactionId: Serializable {
     var date_transaction: Date? = null
-    var investment_portfolio_in_currency_transaction: InvestmentPortfolio? = null
-    var currency_in_transaction: Currency? = null
+    var investmentPortfolioInCurrencyTransaction: InvestmentPortfolio? = null
+    var currencyInTransaction: Currency? = null
 
     constructor(investment_portfolio: InvestmentPortfolio, currency: Currency, date_transaction: Date) {
         this.date_transaction = date_transaction
-        this.investment_portfolio_in_currency_transaction = investment_portfolio
-        this.currency_in_transaction = currency
+        this.investmentPortfolioInCurrencyTransaction = investment_portfolio
+        this.currencyInTransaction = currency
     }
 }

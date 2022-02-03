@@ -21,14 +21,17 @@ class CurrentPortfolioComposition {
 
     @Column
     var count: Int? = null
+    @Column
+    var priceOfUnit: Double? = null
 
     constructor(portfolio: InvestmentPortfolio, ticker: String, date: Date,
-                id_exchange: Int, count: Int){
+                id_exchange: Int, count: Int, price: Double){
         this.portfolio_to_composition = portfolio
         this.tiker = tiker
         this.date = date
         this.id_exchange = id_exchange
-        this.count
+        this.count = count
+        this.priceOfUnit = price
     }
 }
 
