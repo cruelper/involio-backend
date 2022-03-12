@@ -28,7 +28,7 @@ class CustomUserDetailsService : UserDetailsService {
             .build()
     }
 
-    fun registration(user: MyUserDto, isAdmin: Boolean): Pair<String, HttpStatus>{
+    fun registration(user: MyUserDto, isAdmin: Boolean): Pair<String, Boolean>{
         if(dao?.findByIdOrNull(user.email) == null){
             if(dao?.findByLogin(user.login) == null){
 
@@ -38,9 +38,9 @@ class CustomUserDetailsService : UserDetailsService {
 
                 dao?.save(newUser)
 
-                return Pair("Регистрация прошла успешно!", HttpStatus.OK)
-            } else return Pair("Данный логин занят!", HttpStatus.NOT_ACCEPTABLE)
-        }else return Pair("Данная электронная почта занята!", HttpStatus.NOT_ACCEPTABLE)
+                return Pair("Регистрация прошла успешно!", true)
+            } else return Pair("Данный логин занят!", false)
+        }else return Pair("Данная электронная почта занята!", false)
     }
 
 }

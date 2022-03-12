@@ -1,6 +1,6 @@
 package ru.nuykin.involio.dto
 
-import java.sql.Date
+import java.util.Date
 
 data class DividendsDto(
     var date_dividends: Date,

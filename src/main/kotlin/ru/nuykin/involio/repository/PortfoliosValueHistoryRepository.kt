@@ -4,7 +4,7 @@ import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 import ru.nuykin.involio.model.PortfoliosValueHistory
 import ru.nuykin.involio.model.PortfoliosValueHistoryId
-import java.sql.Date
+import java.util.Date
 
 
 @Repository

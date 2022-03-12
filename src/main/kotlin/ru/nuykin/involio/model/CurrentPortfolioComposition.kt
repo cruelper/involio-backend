@@ -1,7 +1,7 @@
 package ru.nuykin.involio.model
 
 import java.io.Serializable
-import java.sql.Date
+import java.util.Date
 import javax.persistence.*
 
 @Entity
@@ -11,41 +11,46 @@ class CurrentPortfolioComposition {
     @Id
     @ManyToOne(optional = true, cascade = [CascadeType.ALL])
     @JoinColumn(name = "id_portfolio")
-    var portfolio_to_composition: InvestmentPortfolio? = null
+    var portfolioToComposition: InvestmentPortfolio? = null
     @Id
-    var tiker: String? = null
+    var ticker: String? = null
     @Id
     var date: Date? = null
     @Id
-    var id_exchange: Int? = null
+    var idExchange: Int? = null
 
     @Column
     var count: Int? = null
     @Column
     var priceOfUnit: Double? = null
 
-    constructor(portfolio: InvestmentPortfolio, ticker: String, date: Date,
-                id_exchange: Int, count: Int, price: Double){
-        this.portfolio_to_composition = portfolio
-        this.tiker = tiker
+    constructor(
+        portfolioToComposition: InvestmentPortfolio,
+        ticker: String,
+        date: Date,
+        idExchange: Int,
+        count: Int,
+        priceOfUnit: Double
+    ) {
+        this.portfolioToComposition = portfolioToComposition
+        this.ticker = ticker
         this.date = date
-        this.id_exchange = id_exchange
+        this.idExchange = idExchange
         this.count = count
-        this.priceOfUnit = price
+        this.priceOfUnit = priceOfUnit
     }
 }
 
-class CurrentPortfolioCompositionId: Serializable {
-    var portfolio_to_composition: InvestmentPortfolio? = null
-    var tiker: String? = null
+class CurrentPortfolioCompositionId(): Serializable {
+    var portfolioToComposition: Int? = null
+    var ticker: String? = null
     var date: Date? = null
-    var id_exchange: Int? = null
+    var idExchange: Int? = null
 
-    constructor(portfolio: InvestmentPortfolio, ticker: String, date: Date,
-                id_exchange: Int){
-        this.portfolio_to_composition = portfolio
-        this.tiker = tiker
+    constructor(portfolioToComposition: Int, ticker: String, date: Date, idExchange: Int) : this() {
+        this.portfolioToComposition = portfolioToComposition
+        this.ticker = ticker
         this.date = date
-        this.id_exchange = id_exchange
+        this.idExchange = idExchange
     }
 }

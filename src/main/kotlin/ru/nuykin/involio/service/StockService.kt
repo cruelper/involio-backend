@@ -28,19 +28,34 @@ class StockService{
     @Autowired
     private val companyDao: CompanyRepository? = null
     @Autowired
-    private val exchangeService: ExchangeService? = null
+    private val currencyDao: CurrencyRepository? = null
+    @Autowired
+    private val exchangeDao: ExchangeRepository? = null
     @Autowired
     private val jwtUtil: JWTUtil? = null
 
     // Вспомогательные функции
     fun getStock(ticker: String, idExchange: Int): Stock {
-        val stockId: StockId = StockId(ticker, exchangeService!!.getExchangeById(idExchange)!!)
+        val stockId: StockId = StockId(ticker, idExchange)
         return stockDao!!.findByIdOrNull(stockId)!!
     }
     fun getPortfolios(token: String): List<InvestmentPortfolio> =
         portfolioDao!!.findAllByOwner(
             myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
         )!!
+
+    fun addOrUpdateStock(stockDto: StockDto){
+
+        val newStock: Stock = Stock(
+            ticker = stockDto.ticker,
+            exchange = exchangeDao!!.findByIdOrNull(stockDto.idExchange)!!,
+            company = companyDao!!.findByIdOrNull(stockDto.CompanyISIN)!!,
+            currency = currencyDao!!.findByIdOrNull(stockDto.idCurrency)!!,
+            available = stockDto.isAvailableToUnqualifiedInvestors,
+            ticker_on_yahoo_api = stockDto.tickerOnYahooApi
+        )
+        stockDao!!.save(newStock)
+    }
 
     //Основные функции
 
@@ -73,22 +88,23 @@ class StockService{
         val listStockInPortfolio: MutableList<ItemInPortfolio> = mutableListOf()
         for (portfolio in portfolios){
             val purchases:  List<CurrentPortfolioComposition> =
-                portfolio.composition_of_portfolio!!.filter { it.tiker == stock.ticker && it.id_exchange == stock.exchange!!.id_exchange }
-
-            val count: Int = purchases.sumOf { it.count!! }
-            var totalPrice: Double = purchases.sumOf { it.count!! * it.priceOfUnit!! }
-            if (stock.trading_currency!!.idCurrency!! != "rub") totalPrice *= getPrice(stock.tiker_on_yahoo_api!!)
-
-            listStockInPortfolio.add(
-                ItemInPortfolio(
-                namePortfolio = portfolio.name_portfolio!!,
-                partOfPortfolio = totalPrice / portfolioService!!.getPriceInRuble(portfolio),
-                currencySign = stock.trading_currency!!.sign_currency!!,
-                countInPortfolio = count,
-                averagePurchasePrice = totalPrice / count,
-                purchases = purchases.map { Triple(it.date!!, it.count!!, it.priceOfUnit!!) },
-            )
-            )
+                portfolio.composition_of_portfolio!!.filter { it.ticker == stock.ticker && it.idExchange == stock.exchange!!.id_exchange }
+            if (purchases.isNotEmpty()){
+                val count: Int = purchases.sumOf { it.count!! }
+                val totalPrice = getPrice(stock.ticker_on_yahoo_api!!) * count
+                listStockInPortfolio.add(
+                    ItemInPortfolio(
+                        namePortfolio = portfolio.name_portfolio!!,
+                        partOfPortfolio =
+                            if (stock.trading_currency!!.idCurrency!! == "rub") totalPrice / portfolioService!!.getPriceInRuble(portfolio)
+                            else totalPrice * getPrice(stock.trading_currency!!.id_on_yahoo_api!!) / portfolioService!!.getPriceInRuble(portfolio),
+                        currencySign = stock.trading_currency!!.sign_currency!!,
+                        countInPortfolio = count,
+                        averagePurchasePrice = purchases.sumOf { it.count!! * it.priceOfUnit!! } / count,
+                        purchases = purchases.map { Triple(it.date!!, it.count!!, it.priceOfUnit!!) },
+                    )
+                )
+            }
         }
 
         return listStockInPortfolio
@@ -146,19 +162,19 @@ class StockService{
 
         val nameExchangeSource: String = curStock.exchange!!.name_exchange!!
         val nameOtherExchanges: List<String> = company.stock!!.map { it.exchange!!.name_exchange!! }
-        val currentPrice: Double = getPrice(curStock.tiker_on_yahoo_api!!)
-        val currencySign: Char = curStock.trading_currency!!.sign_currency!!
+        val currentPrice: Double = getPrice(curStock.ticker_on_yahoo_api!!)
+        val currencySign: String = curStock.trading_currency!!.sign_currency!!
 
         //Вкладка "В портфелях"
         val portfolioOwner: List<InvestmentPortfolio> = getPortfolios(token)
         val inPortfolio: List<ItemInPortfolio> = getStockOfOneCompanyInPortfolio(curStock, portfolioOwner)
 
         //Вкладка "Динамика цены"
-        val dayInterval: List<Double> = getInterval(curStock.tiker_on_yahoo_api!!, "day")
-        val weekInterval: List<Double> = getInterval(curStock.tiker_on_yahoo_api!!, "week")
-        val monthInterval: List<Double> = getInterval(curStock.tiker_on_yahoo_api!!, "month")
-        val yearInterval: List<Double> = getInterval(curStock.tiker_on_yahoo_api!!, "year")
-        val fullInterval: List<Double> = getInterval(curStock.tiker_on_yahoo_api!!, "full")
+        val dayInterval: List<Pair<Long, Double>> = getInterval(curStock.ticker_on_yahoo_api!!, "day")
+        val weekInterval: List<Pair<Long, Double>> = getInterval(curStock.ticker_on_yahoo_api!!, "week")
+        val monthInterval: List<Pair<Long, Double>> = getInterval(curStock.ticker_on_yahoo_api!!, "month")
+        val yearInterval: List<Pair<Long, Double>> = getInterval(curStock.ticker_on_yahoo_api!!, "year")
+        val fullInterval: List<Pair<Long, Double>> = getInterval(curStock.ticker_on_yahoo_api!!, "full")
 
         //Вкладка "О компании"
         val nameCompany: String = company.nameCompany!!
@@ -197,21 +213,59 @@ class StockService{
         )
     }
 
-    fun searchStock(searchString: String, numPage: Int): List<SearchedElement>{
-        val page: Pageable = PageRequest.of(numPage, 10)
+    fun searchStock(searchString: String, numPage: Int): Map<String, List<SearchedElement>>{
+        val page: Pageable = PageRequest.of(numPage, 5)
         val companies: List<Company> = companyDao!!.findByNameCompanyContainingIgnoreCase(searchString, page)
         val stocks: List<Stock> = stockDao!!.findByTickerContainingIgnoreCase(searchString, page)
 
-        val mergeStockList: ArrayList<Stock> = ArrayList<Stock>()
-        mergeStockList.addAll(stocks)
-        for (company in companies) mergeStockList.addAll(company.stock!!)
+        if (companies.isEmpty()) return emptyMap()
+        else {
+            val mapSearchedElement: MutableMap<String, List<Stock>> =
+                (companies.map {
+                    Pair(
+                        it.nameCompany!!,
+                        it.stock!!.toList()
+                    )
+                }).toMap() as MutableMap<String, List<Stock>>
 
-        return mergeStockList.toSet().map {
-            SearchedElement(
-                it.stock_company!!.nameCompany!!,
-                it.ticker!!,
-                it.exchange!!.id_exchange!!,
-                it.exchange!!.name_exchange!!
-            ) }.toList()
+            for (stock in stocks)
+                if (stock.stock_company!!.nameCompany!! !in mapSearchedElement)
+                    mapSearchedElement[stock.stock_company!!.nameCompany!!] = stock.stock_company!!.stock!!.toList()
+
+            return mapSearchedElement.mapValues { mapPair ->
+                mapPair.value.map { stock ->
+                    SearchedElement(
+                        stock.ticker!!,
+                        stock.exchange!!.id_exchange,
+                        stock.exchange!!.name_exchange!!,
+                        getPrice(stock.ticker_on_yahoo_api!!),
+                        stock.trading_currency!!.sign_currency!!
+                    )
+                }
+            }
+        }
+    }
+
+    fun getAllStock(numPage: Int): Map<String, List<SearchedElement>>{
+        val page: Pageable = PageRequest.of(numPage, 5)
+        val companies: List<Company> = companyDao!!.findAll(page).toList()
+
+        if (companies.isEmpty()) return emptyMap()
+        else{
+            val mapSearchedElement: MutableMap<String, List<Stock>> =
+                (companies.map { Pair(it.nameCompany!!, it.stock!!.toList()) }).toMap() as MutableMap<String, List<Stock>>
+
+            return mapSearchedElement.mapValues { mapPair ->
+                mapPair.value.map {  stock ->
+                    SearchedElement(
+                        stock.ticker!!,
+                        stock.exchange!!.id_exchange,
+                        stock.exchange!!.name_exchange!!,
+                        getPrice(stock.ticker_on_yahoo_api!!),
+                        stock.trading_currency!!.sign_currency!!
+                    )
+                }
+            }
+        }
     }
 }

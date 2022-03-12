@@ -9,7 +9,7 @@ import ru.nuykin.involio.model.*
 import ru.nuykin.involio.repository.*
 import ru.nuykin.involio.util.*
 import ru.nuykin.involio.util.security.JWTUtil
-import java.sql.Date
+import java.util.Date
 
 @Service
 @Transactional
@@ -29,6 +29,13 @@ class CurrencyService{
 
     fun getAllCurrency(): List<CurrencyDto> =
         currencyDao!!.findAll().toList().map { CurrencyDto(it.idCurrency!!, it.name_currency!!, it.sign_currency!!, it.id_on_yahoo_api!! ) }
+
+    fun getAllCurrencyWithPrice(): List<Pair<CurrencyDto, Double>> {
+        val allCurrencyWithoutRuble = getAllCurrency().toMutableList()
+        allCurrencyWithoutRuble.removeIf { it.id == "rub" }
+
+        return allCurrencyWithoutRuble.map { Pair(it, getPrice(it.idOnYahooApi)) }
+    }
 
     fun getCurrencyById(id: String): Currency? =
         currencyDao!!.findByIdOrNull(id)
@@ -133,18 +140,18 @@ class CurrencyService{
         val curCurrency: Currency = getCurrency(id)
 
         val currentPrice: Double = getPrice(curCurrency.id_on_yahoo_api!!)
-        val currencySign: Char = curCurrency.sign_currency!!
+        val currencySign: String = curCurrency.sign_currency!!
 
         //Вкладка "В портфелях"
         val portfolioOwner: List<InvestmentPortfolio> = getPortfolios(token)
         val inPortfolio: List<ItemInPortfolio> = getCurrencyInPortfolioInfo(curCurrency, portfolioOwner)
 
         //Вкладка "Динамика цены"
-        val dayInterval: List<Double> = getInterval(curCurrency.id_on_yahoo_api!!, "day")
-        val weekInterval: List<Double> = getInterval(curCurrency.id_on_yahoo_api!!, "week")
-        val monthInterval: List<Double> = getInterval(curCurrency.id_on_yahoo_api!!, "month")
-        val yearInterval: List<Double> = getInterval(curCurrency.id_on_yahoo_api!!, "year")
-        val fullInterval: List<Double> = getInterval(curCurrency.id_on_yahoo_api!!, "full")
+        val dayInterval: List<Pair<Long, Double>> = getInterval(curCurrency.id_on_yahoo_api!!, "day")
+        val weekInterval: List<Pair<Long, Double>> = getInterval(curCurrency.id_on_yahoo_api!!, "week")
+        val monthInterval: List<Pair<Long, Double>> = getInterval(curCurrency.id_on_yahoo_api!!, "month")
+        val yearInterval: List<Pair<Long, Double>> = getInterval(curCurrency.id_on_yahoo_api!!, "year")
+        val fullInterval: List<Pair<Long, Double>> = getInterval(curCurrency.id_on_yahoo_api!!, "full")
 
         return CurrencyInfoDto(
             currentPriceInRuble = currentPrice,

@@ -1,7 +1,7 @@
 package ru.nuykin.involio.model
 
 import java.io.Serializable
-import java.sql.*
+import java.util.*
 import javax.persistence.*
 
 

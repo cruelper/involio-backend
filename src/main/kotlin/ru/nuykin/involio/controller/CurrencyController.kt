@@ -21,6 +21,13 @@ class CurrencyController {
     @Autowired
     private val currencyService: CurrencyService? = null
 
+    @GetMapping("/user/currency")
+    @ApiOperation("Получить список всех валют с их ценой")
+    fun getAllCurrencyWithPrice(
+        @RequestHeader("Authorization") token: String
+    ): List<Pair<CurrencyDto, Double>> =
+        currencyService!!.getAllCurrencyWithPrice()
+
     @GetMapping("/user/currency/{id}")
     @ApiOperation("Получение полной информации по конкретной валюте")
     fun getCurrencyInfo(
@@ -38,7 +45,7 @@ class CurrencyController {
     @ApiOperation("Получение интервала цен конкретной валюты")
     fun getIntervalStockPrice(@PathVariable id: String,
                               @PathVariable interval: String
-    ): List<Double> =
+    ): List<Pair<Long, Double>> =
         getInterval(currencyService!!.getCurrency(id).id_on_yahoo_api!!, interval)
 
     @GetMapping("/user/currency/{id}/stock-in-portfolio-info")

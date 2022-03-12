@@ -5,10 +5,7 @@ import io.swagger.annotations.ApiOperation
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
-import ru.nuykin.involio.dto.BasicPortfolioInfoDto
-import ru.nuykin.involio.dto.ExtendedPortfolioInfoDto
-import ru.nuykin.involio.dto.IndicesInterval
-import ru.nuykin.involio.dto.PortfolioDto
+import ru.nuykin.involio.dto.*
 import ru.nuykin.involio.service.InvestmentPortfolioService
 
 
@@ -44,9 +41,17 @@ class PortfoliosController {
     ): BasicPortfolioInfoDto? =
         portfolioService!!.getBasicPortfolioInfo(id, token,  YesOrNo == "yes")
 
+    @PostMapping("user/portfolios/add-stock")
+    @ApiOperation("Добавление акции в портфель")
+    fun addStockToPortfolio(
+        @RequestHeader("Authorization") token: String,
+        @RequestBody compositionOfPortfolio: CompositionOfPortfolioDto
+    ): Boolean =
+        portfolioService!!.addStockToPortfolio(token, compositionOfPortfolio)
+
     @PostMapping("/user/portfolios")
     @ApiOperation("Создание портфеля")
-    fun createPortfolio(@RequestBody portfolio: PortfolioDto, @RequestHeader("Authorization") token: String): HttpStatus =
+    fun createPortfolio(@RequestBody portfolio: PortfolioDto, @RequestHeader("Authorization") token: String): Boolean =
         portfolioService!!.createPortfolio(portfolio, token)
 
     @DeleteMapping("user/portfolios/{id}")

@@ -1,6 +1,6 @@
 package ru.nuykin.involio.model
 
-import java.sql.*
+import java.util.*
 import javax.persistence.*
 
 @Entity
@@ -31,10 +31,10 @@ class InvestmentPortfolio {
     @JoinColumn(name = "id_broker")
     var broker_of_portfolio: Broker? = null
 
-    @OneToMany(mappedBy = "portfolio_to_history", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "portfolioToHistory", fetch = FetchType.LAZY)
     var history_of_portfolio: Collection<PortfoliosValueHistory>? = null
 
-    @OneToMany(mappedBy = "portfolio_to_composition", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "portfolioToComposition", fetch = FetchType.LAZY)
     var composition_of_portfolio: Collection<CurrentPortfolioComposition>? = null
 
     @OneToMany(mappedBy = "investmentPortfolioInStockTransaction", fetch = FetchType.LAZY)

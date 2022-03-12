@@ -4,16 +4,16 @@ import java.sql.Date
 
 data class CurrencyInfoDto(
     var currentPriceInRuble: Double,
-    var signOfCurrency: Char,
+    var signOfCurrency: String,
 
     //Вкладка "В портфелях"
     var inPortfolio: List<ItemInPortfolio>,
 
     //Вкладка "Динамика цены"
-    var dayInterval: List<Double>,
-    var weekInterval: List<Double>,
-    var monthInterval: List<Double>,
-    var yearInterval: List<Double>,
-    var fullInterval: List<Double>,
+    var dayInterval: List<Pair<Long, Double>>,
+    var weekInterval: List<Pair<Long, Double>>,
+    var monthInterval: List<Pair<Long, Double>>,
+    var yearInterval: List<Pair<Long, Double>>,
+    var fullInterval: List<Pair<Long, Double>>,
 )
 

@@ -19,11 +19,11 @@ class RegistrationController {
 
     @PostMapping("/user-registration")
     @ApiOperation("Регистрация нового пользователя")
-    fun userRegistration(@RequestBody user: MyUserDto): Pair<String, HttpStatus> =
+    fun userRegistration(@RequestBody user: MyUserDto): Pair<String, Boolean> =
         customUserDetailsService!!.registration(user, isAdmin = false)
 
     @PostMapping("/admin/admin-registration")
     @ApiOperation("Регистрация нового администратора")
-    fun adminRegistration(@RequestBody user: MyUserDto): Pair<String, HttpStatus> =
+    fun adminRegistration(@RequestBody user: MyUserDto): Pair<String, Boolean> =
         customUserDetailsService!!.registration(user, isAdmin = true)
 }

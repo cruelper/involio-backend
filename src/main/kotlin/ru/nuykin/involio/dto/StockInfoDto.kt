@@ -1,22 +1,22 @@
 package ru.nuykin.involio.dto
 
-import java.sql.Date
+import java.util.Date
 
 data class StockInfoDto(
     var nameExchangeSource: String,
     var nameOtherExchanges: List<String>,
     var currentPrice: Double,
-    var currencySign: Char,
+    var currencySign: String,
 
     //Вкладка "В портфелях"
     var inPortfolio: List<ItemInPortfolio>,
 
     //Вкладка "Динамика цены"
-    var dayInterval: List<Double>,
-    var weekInterval: List<Double>,
-    var monthInterval: List<Double>,
-    var yearInterval: List<Double>,
-    var fullInterval: List<Double>,
+    var dayInterval: List<Pair<Long, Double>>,
+    var weekInterval: List<Pair<Long, Double>>,
+    var monthInterval: List<Pair<Long, Double>>,
+    var yearInterval: List<Pair<Long, Double>>,
+    var fullInterval: List<Pair<Long, Double>>,
 
     //Вкладка "О компании"
     var nameCompany: String,
@@ -43,15 +43,16 @@ data class Transaction(
 data class ItemInPortfolio(
     var namePortfolio: String,
     var partOfPortfolio: Double,
-    var currencySign: Char,
+    var currencySign: String,
     var countInPortfolio: Int,
     var averagePurchasePrice: Double,
     var purchases: List<Triple<Date, Int, Double>>,
 )
 
 data class SearchedElement(
-    var nameCompany: String,
     var ticker: String,
     var idExchange: Int,
     var nameExchange: String,
+    var curPrice: Double,
+    var signCurrency: String,
 )

@@ -6,7 +6,7 @@ import javax.persistence.*
 @Table(name = "table_exchange")
 class Exchange {
     @Id
-    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id_exchange: Int = 0
 
     @Column

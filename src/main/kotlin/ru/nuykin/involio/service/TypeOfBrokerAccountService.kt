@@ -23,8 +23,8 @@ class TypeOfBrokerAccountService{
     }
 
     fun addTypeOfBrokerAccount(typeOfBrokerAccountDto: TypeOfBrokerAccountDto){
-        val newtypeOfBrokerAccount: TypeOfBrokerAccount = TypeOfBrokerAccount(name_type_of_broker_account = typeOfBrokerAccountDto.name)
-        typeOfBrokerAccountDao!!.save(newtypeOfBrokerAccount)
+        val newTypeOfBrokerAccount: TypeOfBrokerAccount = TypeOfBrokerAccount(name_type_of_broker_account = typeOfBrokerAccountDto.name)
+        typeOfBrokerAccountDao!!.save(newTypeOfBrokerAccount)
     }
 
     fun updateTypeOfBrokerAccount(typeOfBrokerAccountDto: TypeOfBrokerAccountDto){

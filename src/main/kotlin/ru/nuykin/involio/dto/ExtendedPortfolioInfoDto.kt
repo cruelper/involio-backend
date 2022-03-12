@@ -1,7 +1,7 @@
 package ru.nuykin.involio.dto
 
 import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration
-import java.sql.Date
+import java.util.Date
 
 data class ExtendedPortfolioInfoDto (
     var id: Int,

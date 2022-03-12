@@ -26,27 +26,27 @@ class Stock {
     var is_available_to_unqualified_investors: Boolean? = null
 
     @Column
-    var tiker_on_yahoo_api: String? = null
+    var ticker_on_yahoo_api: String? = null
 
     @OneToMany(mappedBy = "stockInTransaction", fetch = FetchType.LAZY)
     var transaction_of_stock: Collection<StockTransaction>? = null
 
 
     constructor(ticker: String, exchange: Exchange, company: Company,
-                currency: Currency, available: Boolean, tiker_on_yahoo_api: String){
+                currency: Currency, available: Boolean, ticker_on_yahoo_api: String){
         this.ticker = ticker
         this.exchange = exchange
         this.stock_company = company
         this.trading_currency = currency
         this.is_available_to_unqualified_investors = available
-        this.tiker_on_yahoo_api = tiker_on_yahoo_api
+        this.ticker_on_yahoo_api = ticker_on_yahoo_api
     }
 }
 
 class StockId() : Serializable {
     var ticker: String? = null
-    var exchange: Exchange? = null
-    constructor(ticker: String, exchange: Exchange) : this() {
+    var exchange: Int? = null
+    constructor(ticker: String, exchange: Int) : this() {
         this.ticker = ticker
         this.exchange = exchange
     }

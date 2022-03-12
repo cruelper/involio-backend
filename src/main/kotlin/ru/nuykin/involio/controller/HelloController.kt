@@ -4,10 +4,8 @@ import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.jpa.repository.Query
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.*
 
-import org.springframework.web.bind.annotation.RestController
 import ru.nuykin.involio.dto.MyUserDto
 import ru.nuykin.involio.model.Branch
 import ru.nuykin.involio.model.MyUser
@@ -25,16 +23,21 @@ class HelloController {
     @Autowired
     private val dao2: BranchRepository? = null
 
-    @GetMapping("/")
-    @ApiOperation("Проверка соединения с сервером")
-    fun isConnect(): Boolean {
-        return true
-    }
+//    @GetMapping("/")
+//    @ApiOperation("Проверка соединения с сервером")
+//    fun isConnect(): Boolean {
+//        return true
+//    }
 
     @GetMapping("/user")
     @ApiOperation("Для проверки разграничений прав для юзера")
     fun user(): String {
         return "User"
+    }
+
+    @RequestMapping("/")
+    fun isConnect(): Boolean {
+        return true
     }
 
     @GetMapping("/admin")

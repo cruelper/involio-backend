@@ -21,12 +21,12 @@ class Currency {
     var name_currency: String? = null
 
     @Column
-    var sign_currency: Char? = null
+    var sign_currency: String? = null
 
     @Column
     var id_on_yahoo_api: String? = null
 
-    constructor(id: String, name: String, sign: Char, id_on_yahoo_api: String){
+    constructor(id: String, name: String, sign: String, id_on_yahoo_api: String){
         this.idCurrency = id
         this.name_currency = name
         this.sign_currency = sign

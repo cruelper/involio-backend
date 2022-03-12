@@ -17,4 +17,11 @@ class WorldIndicesAndIndicators {
     // тут или валюта, которая под капотом, или, например, пункты
     @Column
     var measure: String? = null
+
+    constructor(id: String, name: String, tickerOnYahooApi: String, measure: String) {
+        this.id = id
+        this.name = name
+        this.tickerOnYahooApi = tickerOnYahooApi
+        this.measure = measure
+    }
 }

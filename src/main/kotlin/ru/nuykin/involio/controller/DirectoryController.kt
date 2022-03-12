@@ -157,9 +157,6 @@ class DirectoryController {
     }
 
     //CURRENCY
-    @GetMapping("/user/currency")
-    fun getAllCurrency(): List<CurrencyDto> = currencyService!!.getAllCurrency()
-
     @PostMapping("/admin/currency")
     fun addCurrency(@RequestBody dto: CurrencyDto){
         currencyService!!.addCurrency(dto)

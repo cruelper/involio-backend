@@ -30,15 +30,15 @@ class StockController {
     @GetMapping("/user/stock/{ticker}/{idExchange}/price")
     @ApiOperation("Получение цены конкретной акции")
     fun getCurrentStockPrice(@PathVariable ticker: String, @PathVariable idExchange: Int): Double =
-        getPrice(stockService!!.getStock(ticker, idExchange).tiker_on_yahoo_api!!)
+        getPrice(stockService!!.getStock(ticker, idExchange).ticker_on_yahoo_api!!)
 
     @GetMapping("/user/stock/{ticker}/{idExchange}/interval-price/{interval}")
     @ApiOperation("Получение интервала цен конкретной акции")
     fun getIntervalStockPrice(@PathVariable ticker: String,
                               @PathVariable idExchange: Int,
                               @PathVariable interval: String
-    ): List<Double> =
-        getInterval(stockService!!.getStock(ticker, idExchange).tiker_on_yahoo_api!!, interval)
+    ): List<Pair<Long, Double>> =
+        getInterval(stockService!!.getStock(ticker, idExchange).ticker_on_yahoo_api!!, interval)
 
     @GetMapping("/user/stock/{ticker}/{idExchange}/transactions")
     @ApiOperation("Получение всех транзакций по конкретной акции")
@@ -62,7 +62,12 @@ class StockController {
 
     @GetMapping("/user/search/stock/{searchString}/{page}")
     @ApiOperation("Поиск акций")
-    fun searchStock(@PathVariable searchString: String, @PathVariable page: Int): List<SearchedElement> =
+    fun searchStock(@PathVariable searchString: String, @PathVariable page: Int): Map<String, List<SearchedElement>> =
         stockService!!.searchStock(searchString, page)
+
+    @GetMapping("/user/search/stock/{page}")
+    @ApiOperation("Список всех акций по страницам")
+    fun getAllStock(@PathVariable page: Int): Map<String, List<SearchedElement>> =
+        stockService!!.getAllStock(page)
 
 }

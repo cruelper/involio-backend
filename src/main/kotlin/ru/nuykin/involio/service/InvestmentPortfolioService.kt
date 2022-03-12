@@ -6,13 +6,15 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestHeader
 import ru.nuykin.involio.dto.*
 import ru.nuykin.involio.model.*
 import ru.nuykin.involio.model.Currency
 import ru.nuykin.involio.repository.*
 import ru.nuykin.involio.util.*
 import ru.nuykin.involio.util.security.JWTUtil
-import java.sql.Date
+import java.lang.Exception
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,12 +40,14 @@ class InvestmentPortfolioService {
     @Autowired
     private val indicesAndIndicatorsDao: WorldIndicesAndIndicatorsRepository? = null
     @Autowired
+    private val compositionService: CurrentPortfolioCompositionService? = null
+    @Autowired
     private val stockDao: StockRepository? = null
     @Autowired
     private val jwtUtil: JWTUtil? = null
 
     fun getStock(ticker: String, idExchange: Int): Stock {
-        val stockId: StockId = StockId(ticker, exchangeDao!!.findByIdOrNull(idExchange)!!)
+        val stockId: StockId = StockId(ticker, idExchange)
         return stockDao!!.findByIdOrNull(stockId)!!
     }
 
@@ -60,20 +64,39 @@ class InvestmentPortfolioService {
         ) }
     }
 
-    fun createPortfolio(portfolio: PortfolioDto, token: String): HttpStatus{
+    fun createPortfolio(portfolio: PortfolioDto, token: String): Boolean{
         val owner: MyUser = myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
         val typeOfBrokerAccount: TypeOfBrokerAccount = typeOfBrokerAccountDao!!.findByIdOrNull(portfolio.idTypeBrokerAccount)!!
         val broker: Broker = brokerDao!!.findByIdOrNull(portfolio.idBroker)!!
-        val newPortfolio: InvestmentPortfolio = InvestmentPortfolio(
+
+        var newPortfolio: InvestmentPortfolio = InvestmentPortfolio(
             owner = owner,
             name_portfolio = portfolio.name,
             type_broker_account = typeOfBrokerAccount,
-            date_of_creation = portfolio.dataOfCreation,
+            date_of_creation = getDateInRightFormat(portfolio.dataOfCreation),
             broker = broker,
         )
+        newPortfolio = portfolioDao!!.save(newPortfolio)
 
-        portfolioDao!!.save(newPortfolio)
-        return HttpStatus.OK
+        // заполнение данных в истории стоимости портфеля. По следующему принципу:
+        // создаем запись на каждый день текущего месяца (до момента открытия счета) (в конце каждого месяца все записи кроме последней удаляются)
+        // если счет был открыт более месяца назад, создаем запись за каждый месяц до текущего
+        val curDateInCalendar: Calendar = GregorianCalendar()
+        curDateInCalendar.time = getDateInRightFormat(curDateInCalendar.time)
+        var isMonthStep: Boolean = false
+        while (curDateInCalendar.time.time >= portfolio.dataOfCreation.time){
+            val datInHistory: PortfoliosValueHistory = PortfoliosValueHistory(
+                newPortfolio, Date(curDateInCalendar.time.time)
+            )
+            portfoliosValueHistory!!.save(datInHistory)
+            if (isMonthStep) curDateInCalendar.add(Calendar.MONTH, -1)
+            else{
+                if (curDateInCalendar.get(Calendar.DAY_OF_MONTH) == 1) isMonthStep = true
+                curDateInCalendar.add(Calendar.DAY_OF_YEAR, -1)
+            }
+        }
+
+        return true
     }
 
     fun deletePortfolio(idPortfolio: Int, token: String): HttpStatus{
@@ -87,8 +110,8 @@ class InvestmentPortfolioService {
     fun getPriceInRuble(portfolio: InvestmentPortfolio): Double{
         val currencyPart: MutableMap<Currency, Double> = mutableMapOf()
         for (composition in portfolio.composition_of_portfolio!!){
-            val stock: Stock = getStock(composition.tiker!!, composition.id_exchange!!)
-            val price: Double = getPrice(stock.tiker_on_yahoo_api!!)
+            val stock: Stock = getStock(composition.ticker!!, composition.idExchange!!)
+            val price: Double = getPrice(stock.ticker_on_yahoo_api!!)
             val currency: Currency = stock.trading_currency!!
             if (currency !in currencyPart) currencyPart[currency] = 0.0
             currencyPart[currency] = currencyPart[currency]!! + price * composition.count!!
@@ -103,16 +126,18 @@ class InvestmentPortfolioService {
     }
 
     fun getChangePrices(portfolio: InvestmentPortfolio): Triple<ChangePrice, ChangePrice, ChangePrice>{
-        var unixTime: Long = System.currentTimeMillis() / 1000L
-        unixTime -= unixTime % 86400
+
+        val curDate: Date = getRightCurDate()
+        val yearAgoDay: Date = getRightSomeTimeWithStepDate(curDate, Calendar.YEAR, -1)
+        val dayAgoDay: Date = getRightSomeTimeWithStepDate(curDate, Calendar.DAY_OF_YEAR, -1)
 
         //В рублях
-        val curDayInHistory: PortfoliosValueHistory = portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!! ==  Date(unixTime)}!!
+        val curDayInHistory: PortfoliosValueHistory = portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!!.time == curDate.time }!!
         curDayInHistory.value_in_ruble = getPriceInRuble(portfolio)
         val yearAgoDayInHistory: PortfoliosValueHistory? =
-            portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!! ==  Date(unixTime - 86400 * 365L)}
+            portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!!.time ==  yearAgoDay.time}
         val dayAgoDayInHistory: PortfoliosValueHistory? =
-            portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!! ==  Date(unixTime - 86400)}
+            portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!!.time ==  dayAgoDay.time}
         val changeReplenishmentAndPriceInRuble: Double = curDayInHistory.value_in_ruble!! - curDayInHistory.replenishmentAmountInRuble!!
 
         var priceChangeOnYearInRub: Double =
@@ -133,12 +158,12 @@ class InvestmentPortfolioService {
         val priceChangeOnYearInUSD: Double =
             if (yearAgoDayInHistory == null) changeReplenishmentAndPriceInUSD
             else changeReplenishmentAndPriceInUSD -
-                    (yearAgoDayInHistory.value_in_ruble!! / getInterval(usdIdOnYahooApi, "year")[0] - yearAgoDayInHistory.replenishmentAmountInUSD!!)
+                    (yearAgoDayInHistory.value_in_ruble!! / getInterval(usdIdOnYahooApi, "year")[0].second - yearAgoDayInHistory.replenishmentAmountInUSD!!)
 
         val priceChangeOnDayInUSD: Double =
             if (dayAgoDayInHistory == null) changeReplenishmentAndPriceInUSD
             else changeReplenishmentAndPriceInUSD -
-                    (dayAgoDayInHistory.value_in_ruble!! / getInterval(usdIdOnYahooApi, "day")[0] - dayAgoDayInHistory.replenishmentAmountInUSD!!)
+                    (dayAgoDayInHistory.value_in_ruble!! / getInterval(usdIdOnYahooApi, "day")[0].second - dayAgoDayInHistory.replenishmentAmountInUSD!!)
 
         val changePriceInUSD: ChangePrice = ChangePrice(priceChangeOnDayInUSD, priceChangeOnYearInUSD, changeReplenishmentAndPriceInUSD)
 
@@ -150,12 +175,12 @@ class InvestmentPortfolioService {
         val priceChangeOnYearInEURO: Double =
             if (yearAgoDayInHistory == null) changeReplenishmentAndPriceInEURO
             else changeReplenishmentAndPriceInEURO -
-                    (yearAgoDayInHistory.value_in_ruble!! / getInterval(euroIdOnYahooApi, "year")[0] - yearAgoDayInHistory.replenishmentAmountInEuro!!)
+                    (yearAgoDayInHistory.value_in_ruble!! / getInterval(euroIdOnYahooApi, "year")[0].second - yearAgoDayInHistory.replenishmentAmountInEuro!!)
 
         val priceChangeOnDayInEURO: Double =
             if (dayAgoDayInHistory == null) changeReplenishmentAndPriceInEURO
             else changeReplenishmentAndPriceInEURO -
-                    (dayAgoDayInHistory.value_in_ruble!! / getInterval(euroIdOnYahooApi, "day")[0] - dayAgoDayInHistory.replenishmentAmountInEuro!!)
+                    (dayAgoDayInHistory.value_in_ruble!! / getInterval(euroIdOnYahooApi, "day")[0].second - dayAgoDayInHistory.replenishmentAmountInEuro!!)
 
         val changePriceInEURO: ChangePrice = ChangePrice(priceChangeOnDayInEURO, priceChangeOnYearInEURO, changeReplenishmentAndPriceInEURO)
 
@@ -169,6 +194,7 @@ class InvestmentPortfolioService {
             val portfolio: InvestmentPortfolio = portfolioDao.findByIdOrNull(idPortfolio)!!
 
             val curPriceInRuble: Double = getPriceInRuble(portfolio)
+
             val changePrices: Triple<ChangePrice, ChangePrice, ChangePrice> = getChangePrices(portfolio)
             val inRublePortfolioPrice: PortfolioPrice = PortfolioPrice(
                 currentPrice = curPriceInRuble,
@@ -222,7 +248,7 @@ class InvestmentPortfolioService {
         val rub: Currency = currencyDao!!.findByIdOrNull("rub")!!
         var stocksInPortfolio: MutableMap<Stock, Int> = mutableMapOf()
         for (i in portfolio.composition_of_portfolio!!){
-            val curStock: Stock = getStock(i.tiker!!, i.id_exchange!!)
+            val curStock: Stock = getStock(i.ticker!!, i.idExchange!!)
             if (curStock in stocksInPortfolio) stocksInPortfolio[curStock] = stocksInPortfolio[curStock]!! + i.count!!
             else stocksInPortfolio[curStock] = i.count!!
         }
@@ -244,11 +270,20 @@ class InvestmentPortfolioService {
 
         val listStocksInPortfolio: MutableList<StockInPortfolio> = mutableListOf()
         for(i in stocksInPortfolio){
-            val tickerOnYahooApi: String = i.key.tiker_on_yahoo_api!!
+            val tickerOnYahooApi: String = i.key.ticker_on_yahoo_api!!
             val price: Double = getPrice(tickerOnYahooApi)
-            val dayInterval: List<Double> = getInterval(tickerOnYahooApi, "day")
-            val yearInterval: List<Double> = getInterval(tickerOnYahooApi, "year")
-            val arbitraryInterval: JSONArray = getIntervalInJsonArray(tickerOnYahooApi, (portfolio.date_of_creation!!.time / 1000L).toString(), "1d")
+            val dayInterval: List<Pair<Long, Double>> = getInterval(tickerOnYahooApi, "day")
+            val yearInterval: List<Pair<Long, Double>> = getInterval(tickerOnYahooApi, "year")
+            val arbitraryInterval: List<Pair<Long, Double>> = getIntervalInListDatePrice(tickerOnYahooApi, (portfolio.date_of_creation!!.time / 1000L).toString(), "1d")
+
+            println("****************************************************************")
+            println(price)
+            println(i.value)
+            if (i.key.trading_currency!! != rub) println(getPrice(i.key.trading_currency!!.id_on_yahoo_api!!))
+            println(portfolioPriceInRuble)
+            println("****************************************************************")
+
+
             listStocksInPortfolio.add(
                 StockInPortfolio(
                     name = i.key.stock_company!!.nameCompany!!,
@@ -259,9 +294,9 @@ class InvestmentPortfolioService {
                     if (i.key.trading_currency!! == rub) (price * i.value)  / portfolioPriceInRuble
                     else (price * i.value) * getPrice(i.key.trading_currency!!.id_on_yahoo_api!!)  / portfolioPriceInRuble,
                     changePrice = ChangePrice(
-                        priceChangeOnDay = dayInterval[dayInterval.size - 1] / dayInterval[0],
-                        priceChangeOnYear = yearInterval[yearInterval.size - 1] / yearInterval[0],
-                        priceChangeOnAllTime = arbitraryInterval[arbitraryInterval.length() - 1].toString().toDouble() / arbitraryInterval[0].toString().toDouble(),
+                        priceChangeOnDay = dayInterval[dayInterval.size - 1].second / dayInterval[0].second,
+                        priceChangeOnYear = yearInterval[yearInterval.size - 1].second / yearInterval[0].second,
+                        priceChangeOnAllTime = arbitraryInterval[arbitraryInterval.size - 1].second / arbitraryInterval[0].second,
                     ),
                 )
             )
@@ -272,7 +307,9 @@ class InvestmentPortfolioService {
 
     fun getChangeIndexFromUSDOrEuro(indexTicker: String, portfolio: InvestmentPortfolio, tickerFromCurrency: String): Map<String, ChangePrice>{
         val dateOfCreation: Long = portfolio.date_of_creation!!.time / 1000L
-        val unixTime: Long = System.currentTimeMillis() / 1000L
+        val calendar = GregorianCalendar()
+        val dayAgo = getRightSomeTimeWithStepDate(calendar.time, Calendar.DAY_OF_YEAR, -1).time / 1000L
+        val yearAgo = getRightSomeTimeWithStepDate(calendar.time, Calendar.YEAR, -1).time / 1000L
 
         val USDYahooTicker: String
         val EuroYahooTicker: String
@@ -287,17 +324,17 @@ class InvestmentPortfolioService {
 
         val change: ChangePrice =
             getChangeIndicesOrIndicators(indicesAndIndicatorsDao!!
-                .findByIdOrNull("indexTicker")!!.tickerOnYahooApi!!, dateOfCreation)
+                .findByIdOrNull(indexTicker)!!.tickerOnYahooApi!!, dateOfCreation)
 
         val changeInRub: ChangePrice = ChangePrice(
-            change.priceChangeOnDay * currencyRateChangeInRuble(USDYahooTicker, unixTime - 86400),
-            change.priceChangeOnYear * currencyRateChangeInRuble(USDYahooTicker, unixTime - 86400 * 365),
+            change.priceChangeOnDay * currencyRateChangeInRuble(USDYahooTicker, dayAgo),
+            change.priceChangeOnYear * currencyRateChangeInRuble(USDYahooTicker, yearAgo),
             change.priceChangeOnAllTime * currencyRateChangeInRuble(USDYahooTicker, dateOfCreation)
         )
 
         val changeInEuro: ChangePrice = ChangePrice(
-            changeInRub.priceChangeOnDay / currencyRateChangeInRuble(EuroYahooTicker, unixTime - 86400),
-            changeInRub.priceChangeOnYear / currencyRateChangeInRuble(EuroYahooTicker, unixTime - 86400 * 365),
+            changeInRub.priceChangeOnDay / currencyRateChangeInRuble(EuroYahooTicker, dayAgo),
+            changeInRub.priceChangeOnYear / currencyRateChangeInRuble(EuroYahooTicker, yearAgo),
             changeInRub.priceChangeOnAllTime / currencyRateChangeInRuble(EuroYahooTicker, dateOfCreation)
         )
 
@@ -353,8 +390,8 @@ class InvestmentPortfolioService {
             val sectorsMap: MutableMap<Sector, Double> = mutableMapOf()
             val currenciesMap: MutableMap<Currency, Double> = mutableMapOf()
             for (curComposition in portfolio.composition_of_portfolio!!){
-                val curStock: Stock = getStock(curComposition.tiker!!, curComposition.id_exchange!!)
-                var stockPrice: Double = curComposition.count!! * getPrice(curStock.tiker_on_yahoo_api!!)
+                val curStock: Stock = getStock(curComposition.ticker!!, curComposition.idExchange!!)
+                var stockPrice: Double = curComposition.count!! * getPrice(curStock.ticker_on_yahoo_api!!)
                 if (curStock.trading_currency!!.idCurrency != "rub") stockPrice *= getPrice(curStock.trading_currency!!.id_on_yahoo_api!!)
 
                 companiesMap[curStock.stock_company!!] =
@@ -490,10 +527,10 @@ class InvestmentPortfolioService {
 
     fun getIndicesInterval(portfolio: InvestmentPortfolio, idIndices: String): Triple<List<Double>, List<Double>, List<Double>>{
         val curIndices: WorldIndicesAndIndicators = indicesAndIndicatorsDao!!.findByIdOrNull(idIndices)!!
-        val indicesInterval: JSONArray = getIntervalInJsonArray(curIndices.tickerOnYahooApi!!, (portfolio.date_of_creation!!.time / 1000L).toString(), "1d")
+        val indicesInterval: List<Pair<Long, Double>> = getIntervalInListDatePrice(curIndices.tickerOnYahooApi!!, (portfolio.date_of_creation!!.time / 1000L).toString(), "1d")
 
         val indicesIntervalInDouble: MutableList<Double> = mutableListOf()
-        for (i in 0 until indicesInterval.length()) indicesIntervalInDouble.add(indicesInterval[i].toString().toDouble())
+        for (element in indicesInterval) indicesIntervalInDouble.add(element.toString().toDouble())
 
         val measure: Currency? = currencyDao!!.findByIdOrNull(curIndices.measure!!)
 
@@ -530,7 +567,7 @@ class InvestmentPortfolioService {
                         if (firstInQueue.itemCount!! <= countUnitOnTransaction) stocksQueue[curTransaction.stockInTransaction!!]!!.poll()
                         countUnitOnTransaction -= firstInQueue.itemCount!! % countUnitOnTransaction
                         val incomeInSomeCurrency: Double = (firstInQueue.itemCount!! % countUnitOnTransaction) *
-                                (getPrice(curTransaction.stockInTransaction!!.tiker_on_yahoo_api!!) - firstInQueue.unitCost!!)
+                                (getPrice(curTransaction.stockInTransaction!!.ticker_on_yahoo_api!!) - firstInQueue.unitCost!!)
 
                         val curCurrency: Currency = curTransaction.stockInTransaction!!.trading_currency!!
                         if (incomeInSomeCurrency > 0)
@@ -625,6 +662,24 @@ class InvestmentPortfolioService {
             indicesIntervalsInUsd = listOfIndices.keys.associateWith { listOfIndices[it]!!.second },
             indicesIntervalsInEuro = listOfIndices.keys.associateWith { listOfIndices[it]!!.third },
         )
+    }
+
+    fun addStockToPortfolio(token: String, compositionOfPortfolio: CompositionOfPortfolioDto): Boolean{
+        return try {
+            val user: MyUser = myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
+            val owner: MyUser = portfolioDao!!.findByIdOrNull(compositionOfPortfolio.idPortfolio)!!.owner!!
+            if (user == owner){
+                val portfolio = user.portfolio_of_user!!.find { it.id_investment_portfolio == compositionOfPortfolio.idPortfolio }!!
+                compositionService!!.addStockToComposition(portfolio, compositionOfPortfolio)
+                portfolio.history_of_portfolio!!.forEach { it ->
+
+                }
+                true
+            }
+            else false
+        }catch (ex: Exception){
+            false
+        }
     }
 }
 

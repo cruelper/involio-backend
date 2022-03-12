@@ -1,8 +1,6 @@
 package ru.nuykin.involio.util
 
-import org.springframework.boot.configurationprocessor.json.JSONArray
 import org.springframework.boot.configurationprocessor.json.JSONObject
-import org.springframework.data.repository.findByIdOrNull
 import ru.nuykin.involio.dto.ChangePrice
 import java.io.BufferedReader
 import java.io.InputStream
@@ -10,7 +8,7 @@ import java.io.InputStreamReader
 import java.io.Reader
 import java.net.URL
 import java.nio.charset.Charset
-import java.sql.Date
+import java.util.*
 
 fun readAll(rd: Reader): String? {
     val sb = StringBuilder()
@@ -32,16 +30,33 @@ fun readJsonFromUrl(url: String?): JSONObject {
     }
 }
 
-fun getIntervalInJsonArray(tickerOnYahooApi: String, period1: String, interval: String): JSONArray{
+fun getIntervalInListDatePrice(tickerOnYahooApi: String, period1: String, interval: String): List<Pair<Long, Double>>{
     val json: JSONObject = readJsonFromUrl("https://query1.finance.yahoo.com/v8/finance/chart/$tickerOnYahooApi?symbol=$tickerOnYahooApi&period1=$period1&period2=9999999999&interval=$interval")
-    return json
+    val indicators = json
         .getJSONObject("chart")
         .getJSONArray("result")
         .getJSONObject(0)
-        .getJSONObject("indicators")
-        .getJSONArray("quote")
-        .getJSONObject(0)
-        .getJSONArray("low")
+
+    return try {
+        val prices = indicators
+            .getJSONObject("indicators")
+            .getJSONArray("quote")
+            .getJSONObject(0)
+            .getJSONArray("close")
+        val dates = indicators
+            .getJSONArray("timestamp")
+
+        val merge: MutableList<Pair<Long, Double>> = mutableListOf()
+        for (i in 0 until dates.length()) merge.add(Pair(dates.getLong(i), prices.getDouble(i)))
+        return merge
+    }catch (e: Exception){
+        val lastPrice = indicators
+            .getJSONObject("meta")
+            .getDouble("regularMarketPrice")
+        val unixTime = System.currentTimeMillis() / 1000L
+        return listOf(Pair(unixTime, lastPrice), Pair(unixTime, lastPrice))
+    }
+
 }
 
 fun getPrice(tickerOnYahoo: String): Double{
@@ -59,7 +74,7 @@ fun getPrice(tickerOnYahoo: String): Double{
 
 }
 
-fun getInterval(tickerOnYahoo: String, interval: String): List<Double>{
+fun getInterval(tickerOnYahoo: String, interval: String): List<Pair<Long, Double>>{
     var stepInLoop: Int =
         when(interval){
             "week" -> 12
@@ -72,27 +87,23 @@ fun getInterval(tickerOnYahoo: String, interval: String): List<Double>{
             else -> "1d"
         }
 
-    var unixTime: Long = System.currentTimeMillis() / 1000L
-    val backStep: Long =
-        when(interval){
-            "day" -> 86400L
-            "week" -> 86400L*7
-            "month" -> 86400L*30
-            "year" -> 86400L*365
-            "full" -> unixTime
-            else -> 0
-        }
-    unixTime-=backStep
-
-    val jsonListOfPrice: JSONArray = getIntervalInJsonArray(tickerOnYahoo, unixTime.toString(), stepTime)
-
-    val listOfPrice: ArrayList<Double> = ArrayList<Double>()
-
-    if (jsonListOfPrice.length() / stepInLoop > 250) stepInLoop *= (jsonListOfPrice.length() / 250)
-
-    for (i in 0 until jsonListOfPrice.length() step stepInLoop){
-        listOfPrice.add(jsonListOfPrice[i].toString().toDouble())
+    val calendar = GregorianCalendar()
+    when(interval){
+        "day" -> calendar.add(Calendar.DAY_OF_YEAR, -1)
+        "week" -> calendar.add(Calendar.WEEK_OF_YEAR, -1)
+        "month" -> calendar.add(Calendar.MONTH, -1)
+        "year" -> calendar.add(Calendar.YEAR, -1)
     }
+    val unixTime: Long = calendar.time.time / 1000L
+
+    val jsonListOfPrice: List<Pair<Long, Double>> = getIntervalInListDatePrice(tickerOnYahoo, unixTime.toString(), stepTime)
+
+    val listOfPrice: ArrayList<Pair<Long, Double>> = ArrayList<Pair<Long, Double>>()
+
+    if (jsonListOfPrice.size / stepInLoop > 250) stepInLoop *= (jsonListOfPrice.size / 250)
+
+    for (i in jsonListOfPrice.indices step stepInLoop)
+        if (jsonListOfPrice[i].toString() != "null") listOfPrice.add(jsonListOfPrice[i])
 
     return listOfPrice.toList()
 }
@@ -102,26 +113,25 @@ fun currencyRateChangeInRuble(tickerOnYahooApi: String, startDate: Long): Double
     val interval: String = "1d"
     val period1: String = startDate.toString()
 
-    val jsonListOfPrice: JSONArray = getIntervalInJsonArray(tickerOnYahooApi, period1, interval)
+    val jsonListOfPrice: List<Pair<Long, Double>> = getIntervalInListDatePrice(tickerOnYahooApi, period1, interval)
 
-    return jsonListOfPrice[jsonListOfPrice.length() - 1].toString().toDouble() /
-            jsonListOfPrice[0].toString().toDouble()
+    return jsonListOfPrice[jsonListOfPrice.size - 1].second /
+            jsonListOfPrice[0].second
 }
 
 fun getChangeIndicesOrIndicators(tickerOnYahooApi: String, startDate: Long): ChangePrice{
-    val dayInterval: List<Double> = getInterval(tickerOnYahooApi, "day")
-    val dayChange: Double = dayInterval[dayInterval.size - 1] / dayInterval[0]
+    val dayInterval: List<Pair<Long, Double>> = getInterval(tickerOnYahooApi, "day")
+    val dayChange: Double = dayInterval[dayInterval.size - 1].second / dayInterval[0].second
 
-    val yearInterval: List<Double> = getInterval(tickerOnYahooApi, "year")
-    val yearChange: Double = yearInterval[yearInterval.size - 1] / yearInterval[0]
+    val yearInterval:List<Pair<Long, Double>> = getInterval(tickerOnYahooApi, "year")
+    val yearChange: Double = yearInterval[yearInterval.size - 1].second / yearInterval[0].second
 
     val interval: String = "1d"
     val period1: String = startDate.toString()
 
-    val jsonListOfPrice: JSONArray = getIntervalInJsonArray(tickerOnYahooApi, period1, interval)
-
+    val jsonListOfPrice: List<Pair<Long, Double>> = getIntervalInListDatePrice(tickerOnYahooApi, period1, interval)
     val arbitraryChange: Double =
-        jsonListOfPrice[jsonListOfPrice.length() - 1].toString().toDouble() / jsonListOfPrice[0].toString().toDouble()
+        jsonListOfPrice[jsonListOfPrice.size - 1].second / jsonListOfPrice[0].second
 
     return ChangePrice(dayChange, yearChange, arbitraryChange)
 }

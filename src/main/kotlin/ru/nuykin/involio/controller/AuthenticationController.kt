@@ -43,7 +43,7 @@ class AuthenticationController {
             )
             System.out.println(authentication)
         } catch (e: BadCredentialsException) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Имя или пароль неправильны", e)
+            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Имя или пароль введены неверно!", e)
         }
         // при создании токена в него кладется username как Subject и список authorities как кастомный claim
         val jwt = jwtTokenUtil!!.generateToken((authentication.getPrincipal() as UserDetails))
