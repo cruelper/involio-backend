@@ -34,7 +34,7 @@ dependencies {
 
 	implementation ("org.springframework.boot:spring-boot-configuration-processor")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
-	runtimeOnly("org.postgresql:postgresql")
+	runtimeOnly("org.postgresql:postgresql:42.2.22")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 

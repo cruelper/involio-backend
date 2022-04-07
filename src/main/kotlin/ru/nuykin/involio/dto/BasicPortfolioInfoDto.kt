@@ -52,6 +52,8 @@ data class StockInPortfolio(
     var currentUnitPrice: Double,
     var partOfPortfolio: Double,
     var changePrice: ChangePrice,
+    var idExchange: Int,
+    var nameExchange: String,
 )
 
 

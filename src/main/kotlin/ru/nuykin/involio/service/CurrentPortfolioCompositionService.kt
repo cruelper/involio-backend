@@ -34,4 +34,9 @@ class CurrentPortfolioCompositionService {
             compositionDao!!.save(curPortfolioComposition)
         }
     }
+
+    fun addCurrencyToComposition(portfolio: InvestmentPortfolio, compositionOfPortfolio: CompositionOfPortfolioDto){
+        compositionOfPortfolio.idExchange = -1
+        addStockToComposition(portfolio, compositionOfPortfolio)
+    }
 }

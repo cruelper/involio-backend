@@ -34,13 +34,13 @@ data class ExtendedPortfolioInfoDto (
 )
 
 data class ValuesInInterval(
-    var monthInterval: List<Double>,
+    var monthInterval: List<Pair<Long, Double>>,
     var monthData: BasicValues,
 
-    var yearInterval: List<Double>,
+    var yearInterval: List<Pair<Long, Double>>,
     var yearData: BasicValues,
 
-    var allInterval: List<Double>,
+    var allInterval: List<Pair<Long, Double>>,
     var allData: BasicValues,
 )
 

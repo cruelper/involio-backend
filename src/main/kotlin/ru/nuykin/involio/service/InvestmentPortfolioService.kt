@@ -276,14 +276,6 @@ class InvestmentPortfolioService {
             val yearInterval: List<Pair<Long, Double>> = getInterval(tickerOnYahooApi, "year")
             val arbitraryInterval: List<Pair<Long, Double>> = getIntervalInListDatePrice(tickerOnYahooApi, (portfolio.date_of_creation!!.time / 1000L).toString(), "1d")
 
-            println("****************************************************************")
-            println(price)
-            println(i.value)
-            if (i.key.trading_currency!! != rub) println(getPrice(i.key.trading_currency!!.id_on_yahoo_api!!))
-            println(portfolioPriceInRuble)
-            println("****************************************************************")
-
-
             listStocksInPortfolio.add(
                 StockInPortfolio(
                     name = i.key.stock_company!!.nameCompany!!,
@@ -298,6 +290,8 @@ class InvestmentPortfolioService {
                         priceChangeOnYear = yearInterval[yearInterval.size - 1].second / yearInterval[0].second,
                         priceChangeOnAllTime = arbitraryInterval[arbitraryInterval.size - 1].second / arbitraryInterval[0].second,
                     ),
+                    idExchange = i.key.exchange!!.id_exchange!!,
+                    nameExchange = i.key.exchange!!.name_exchange!!,
                 )
             )
         }
@@ -429,7 +423,9 @@ class InvestmentPortfolioService {
                 rubInterval = getPortfolioValueInterval(portfolio, "rub"),
                 usdInterval = getPortfolioValueInterval(portfolio, "usd"),
                 euroInterval = getPortfolioValueInterval(portfolio, "eur"),
-                assets = listOf(Pair("stocks", stocksPrice / portfolioPriceInRuble), Pair("currency", 100 - stocksPrice / portfolioPriceInRuble)),
+                assets =
+                if (portfolioPriceInRuble == 0.0) listOf(Pair("stocks", 0.0), Pair("currency", 0.0))
+                else listOf(Pair("stocks", stocksPrice / portfolioPriceInRuble), Pair("currency", 100 - stocksPrice / portfolioPriceInRuble)),
                 companies = companiesMap.toList().map { Pair(it.first.nameCompany!!, it.second / portfolioPriceInRuble) },
                 branches = branchesMap.toList().map { Pair(it.first.nameBranch!!, it.second / portfolioPriceInRuble) },
                 sectors = sectorsMap.toList().map { Pair(it.first.name_sector!!, it.second / portfolioPriceInRuble) },
@@ -474,10 +470,14 @@ class InvestmentPortfolioService {
             }
         }
 
-        var curTime: Long = System.currentTimeMillis()
-        curTime -= curTime % (86400 * 1000)
+//        var curTime: Long = System.currentTimeMillis()
+//        curTime -= curTime % (86400 * 1000)
 
-        val monthInterval: List<PortfoliosValueHistory> = portfolio.history_of_portfolio!!.filter { it.datePortfoliosValue!! >= Date(curTime - 86400 * 30) }
+        var curTime = getRightCurDate()
+
+        val monthInterval: List<PortfoliosValueHistory> = portfolio.history_of_portfolio!!.filter {
+            it.datePortfoliosValue!! >= getRightSomeTimeWithStepDate(curTime, Calendar.MONTH, -1)
+        }
 
         var curMonth: Int = Calendar.MONTH - 1
         var curYear: Int = Calendar.YEAR
@@ -494,7 +494,10 @@ class InvestmentPortfolioService {
                 curMonth -=1
             }
         }
-        yearInterval.add(portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!! ==  Date(curTime)}!!)
+
+        val lastDay = getRightSomeTimeWithStepDate(curTime, Calendar.DAY_OF_YEAR, -1).time
+
+        yearInterval.add(portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!!.time ==  lastDay}!!)
 
         val allInterval: MutableList<PortfoliosValueHistory> = mutableListOf()
         val isEnd: Boolean = true
@@ -504,23 +507,23 @@ class InvestmentPortfolioService {
             if (dayOfHistory == null) break
             else allInterval.add(0, dayOfHistory)
         }
-        allInterval.add(portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!! ==  Date(curTime)}!!)
+        allInterval.add(portfolio.history_of_portfolio!!.find { it.datePortfoliosValue!!.time ==  lastDay}!!)
 
         return ValuesInInterval(
             monthInterval = when(idCurrency){
-                "usd" -> monthInterval.map { it.value_in_usd!! }
-                "eur" -> monthInterval.map { it.value_in_euro!! }
-                else -> monthInterval.map { it.value_in_ruble!! } },
+                "usd" -> monthInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_usd!!) }
+                "eur" -> monthInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_euro!!) }
+                else -> monthInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_ruble!!) } },
             monthData = getBasicValues(monthInterval, idCurrency),
             yearInterval = when(idCurrency){
-                "usd" -> yearInterval.map { it.value_in_usd!! }
-                "eur" -> yearInterval.map { it.value_in_euro!! }
-                else -> yearInterval.map { it.value_in_ruble!! } },
+                "usd" -> yearInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_usd!!) }
+                "eur" -> yearInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_euro!!) }
+                else -> yearInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_ruble!!) } },
             yearData = getBasicValues(yearInterval, idCurrency),
             allInterval = when(idCurrency){
-                "usd" -> allInterval.map { it.value_in_usd!! }
-                "eur" -> allInterval.map { it.value_in_euro!! }
-                else -> allInterval.map { it.value_in_ruble!! } },
+                "usd" -> allInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_usd!!) }
+                "eur" -> allInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_euro!!) }
+                else -> allInterval.map { Pair(it.datePortfoliosValue!!.time / 1000, it.value_in_ruble!!) } },
             allData = getBasicValues(allInterval, idCurrency),
         )
     }
@@ -671,6 +674,24 @@ class InvestmentPortfolioService {
             if (user == owner){
                 val portfolio = user.portfolio_of_user!!.find { it.id_investment_portfolio == compositionOfPortfolio.idPortfolio }!!
                 compositionService!!.addStockToComposition(portfolio, compositionOfPortfolio)
+                portfolio.history_of_portfolio!!.forEach { it ->
+
+                }
+                true
+            }
+            else false
+        }catch (ex: Exception){
+            false
+        }
+    }
+
+    fun addCurrencyToPortfolio(token: String, compositionOfPortfolio: CompositionOfPortfolioDto): Boolean{
+        return try {
+            val user: MyUser = myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
+            val owner: MyUser = portfolioDao!!.findByIdOrNull(compositionOfPortfolio.idPortfolio)!!.owner!!
+            if (user == owner){
+                val portfolio = user.portfolio_of_user!!.find { it.id_investment_portfolio == compositionOfPortfolio.idPortfolio }!!
+                compositionService!!.addCurrencyToComposition(portfolio, compositionOfPortfolio)
                 portfolio.history_of_portfolio!!.forEach { it ->
 
                 }

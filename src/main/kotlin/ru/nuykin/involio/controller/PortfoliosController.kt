@@ -49,6 +49,14 @@ class PortfoliosController {
     ): Boolean =
         portfolioService!!.addStockToPortfolio(token, compositionOfPortfolio)
 
+    @PostMapping("user/portfolios/add-currency")
+    @ApiOperation("Добавление валюты в портфель")
+    fun addCurrencyToPortfolio(
+        @RequestHeader("Authorization") token: String,
+        @RequestBody compositionOfPortfolio: CompositionOfPortfolioDto
+    ): Boolean =
+        portfolioService!!.addCurrencyToPortfolio(token, compositionOfPortfolio)
+
     @PostMapping("/user/portfolios")
     @ApiOperation("Создание портфеля")
     fun createPortfolio(@RequestBody portfolio: PortfolioDto, @RequestHeader("Authorization") token: String): Boolean =
