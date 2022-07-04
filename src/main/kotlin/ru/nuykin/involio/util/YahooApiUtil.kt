@@ -20,6 +20,7 @@ fun readAll(rd: Reader): String? {
 }
 
 fun readJsonFromUrl(url: String?): JSONObject {
+    println(url)
     val file: InputStream = URL(url).openStream()
     return try {
         val rd = BufferedReader(InputStreamReader(file, Charset.forName("UTF-8")))
@@ -45,18 +46,20 @@ fun getIntervalInListDatePrice(tickerOnYahooApi: String, period1: String, interv
             .getJSONArray("close")
         val dates = indicators
             .getJSONArray("timestamp")
-
         val merge: MutableList<Pair<Long, Double>> = mutableListOf()
-        for (i in 0 until dates.length()) merge.add(Pair(dates.getLong(i), prices.getDouble(i)))
+        for (i in 0 until minOf(dates.length(), prices.length())) {
+            if (!prices.isNull(i) && !dates.isNull(i))
+                merge.add(Pair(dates.getLong(i), prices.getDouble(i)))
+        }
         return merge
     }catch (e: Exception){
+        println("was except")
         val lastPrice = indicators
             .getJSONObject("meta")
             .getDouble("regularMarketPrice")
         val unixTime = System.currentTimeMillis() / 1000L
         return listOf(Pair(unixTime, lastPrice), Pair(unixTime, lastPrice))
     }
-
 }
 
 fun getPrice(tickerOnYahoo: String): Double{
@@ -71,7 +74,6 @@ fun getPrice(tickerOnYahoo: String): Double{
         .get("raw")
         .toString()
         .toDouble()
-
 }
 
 fun getInterval(tickerOnYahoo: String, interval: String): List<Pair<Long, Double>>{

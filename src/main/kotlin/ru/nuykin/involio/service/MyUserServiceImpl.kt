@@ -2,7 +2,6 @@ package ru.nuykin.involio.service
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.repository.findByIdOrNull
-import org.springframework.http.HttpStatus
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
@@ -42,5 +41,6 @@ class CustomUserDetailsService : UserDetailsService {
             } else return Pair("Данный логин занят!", false)
         }else return Pair("Данная электронная почта занята!", false)
     }
+
 
 }

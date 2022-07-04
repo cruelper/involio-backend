@@ -46,16 +46,13 @@ class InvestmentPortfolioService {
     @Autowired
     private val jwtUtil: JWTUtil? = null
 
-    fun getStock(ticker: String, idExchange: Int): Stock {
-        val stockId: StockId = StockId(ticker, idExchange)
-        return stockDao!!.findByIdOrNull(stockId)!!
-    }
-
+    //CRUD without R/2 and U
     fun getListPortfolio(token: String): List<PortfolioDto>{
         val portfolios: List<InvestmentPortfolio> = portfolioDao!!.findAllByOwner(
             myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
         )!!
-        return portfolios.map { PortfolioDto(
+        return portfolios.map {
+            PortfolioDto(
             id = it.id_investment_portfolio,
             idBroker = it.broker_of_portfolio!!.id_broker,
             idTypeBrokerAccount = it.type_broker_account!!.id_type_of_broker_account,
@@ -63,7 +60,13 @@ class InvestmentPortfolioService {
             dataOfCreation = it.date_of_creation!!,
         ) }
     }
-
+    fun deletePortfolio(idPortfolio: Int, token: String): HttpStatus{
+        val user: MyUser = myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
+        val owner: MyUser = portfolioDao!!.findByIdOrNull(idPortfolio)?.owner!!
+        if (user == owner) portfolioDao.delete(portfolioDao.findByIdOrNull(idPortfolio)!!)
+        else return HttpStatus.NOT_ACCEPTABLE
+        return HttpStatus.OK
+    }
     fun createPortfolio(portfolio: PortfolioDto, token: String): Boolean{
         val owner: MyUser = myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
         val typeOfBrokerAccount: TypeOfBrokerAccount = typeOfBrokerAccountDao!!.findByIdOrNull(portfolio.idTypeBrokerAccount)!!
@@ -99,13 +102,9 @@ class InvestmentPortfolioService {
         return true
     }
 
-    fun deletePortfolio(idPortfolio: Int, token: String): HttpStatus{
-        val user: MyUser = myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
-        val owner: MyUser = portfolioDao!!.findByIdOrNull(idPortfolio)!!.owner!!
-        if (user == owner) portfolioDao.delete(portfolioDao.findByIdOrNull(idPortfolio)!!)
-        else return HttpStatus.NOT_ACCEPTABLE
-        return HttpStatus.OK
-    }
+
+
+
 
     fun getPriceInRuble(portfolio: InvestmentPortfolio): Double{
         val currencyPart: MutableMap<Currency, Double> = mutableMapOf()
@@ -282,6 +281,7 @@ class InvestmentPortfolioService {
                     ticker = if (needToGroupStockOfOneCompany) "" else i.key.ticker!!,
                     count = i.value,
                     currentUnitPrice = price,
+                    currencySign = i.key.trading_currency!!.sign_currency!!,
                     partOfPortfolio =
                     if (i.key.trading_currency!! == rub) (price * i.value)  / portfolioPriceInRuble
                     else (price * i.value) * getPrice(i.key.trading_currency!!.id_on_yahoo_api!!)  / portfolioPriceInRuble,
@@ -701,6 +701,11 @@ class InvestmentPortfolioService {
         }catch (ex: Exception){
             false
         }
+    }
+
+    fun getStock(ticker: String, idExchange: Int): Stock {
+        val stockId: StockId = StockId(ticker, idExchange)
+        return stockDao!!.findByIdOrNull(stockId)!!
     }
 }
 

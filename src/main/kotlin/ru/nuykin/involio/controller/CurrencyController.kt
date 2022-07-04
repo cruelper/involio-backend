@@ -59,5 +59,4 @@ class CurrencyController {
     @ApiOperation("Поиск валюты")
     fun searchStock(@PathVariable searchString: String): List<CurrencyDto> =
         currencyService!!.searchCurrency(searchString)
-
 }

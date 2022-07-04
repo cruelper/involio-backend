@@ -27,29 +27,18 @@ class CurrencyService{
     @Autowired
     private val jwtUtil: JWTUtil? = null
 
+    //CRUD
     fun getAllCurrency(): List<CurrencyDto> =
         currencyDao!!.findAll().toList().map { CurrencyDto(it.idCurrency!!, it.name_currency!!, it.sign_currency!!, it.id_on_yahoo_api!! ) }
-
-    fun getAllCurrencyWithPrice(): List<Pair<CurrencyDto, Double>> {
-        val allCurrencyWithoutRuble = getAllCurrency().toMutableList()
-        allCurrencyWithoutRuble.removeIf { it.id == "rub" }
-
-        return allCurrencyWithoutRuble.map { Pair(it, getPrice(it.idOnYahooApi)) }
-    }
-
     fun getCurrencyById(id: String): Currency? =
         currencyDao!!.findByIdOrNull(id)
-
-    fun getDtoCurrencyById(id: String): CurrencyDto? {
-        val currency: Currency? = currencyDao!!.findByIdOrNull(id)
-        return if(currency == null) null else CurrencyDto(currency.idCurrency!!, currency.name_currency!!, currency.sign_currency!!, currency.id_on_yahoo_api!!)
-    }
-
     fun addCurrency(currencyDto: CurrencyDto){
         val newCurrency: Currency = Currency(id = currencyDto.id, name = currencyDto.name, sign = currencyDto.sign, currencyDto.idOnYahooApi)
         currencyDao!!.save(newCurrency)
     }
-
+    fun deleteCurrencyById(id: String){
+        currencyDao!!.deleteById(id)
+    }
     fun updateCurrency(currencyDto: CurrencyDto){
         val currency = currencyDao!!.findByIdOrNull(currencyDto.id)
         if(currency != null){
@@ -58,19 +47,22 @@ class CurrencyService{
         }
     }
 
-    fun deleteCurrencyById(id: String){
-        currencyDao!!.deleteById(id)
+
+    fun getAllCurrencyWithPrice(): List<Pair<CurrencyDto, Double>> {
+        val allCurrencyWithoutRuble = getAllCurrency().toMutableList()
+        allCurrencyWithoutRuble.removeIf { it.id == "rub" }
+
+        return allCurrencyWithoutRuble.map { Pair(it, getPrice(it.idOnYahooApi)) }
     }
 
-    // Вспомогательные функции
+    fun getDtoCurrencyById(id: String): CurrencyDto? {
+        val currency: Currency? = currencyDao!!.findByIdOrNull(id)
+        return if(currency == null) null else CurrencyDto(currency.idCurrency!!, currency.name_currency!!, currency.sign_currency!!, currency.id_on_yahoo_api!!)
+    }
+
     fun getCurrency(id: String): Currency =
         currencyDao!!.findByIdOrNull(id)!!
-    fun getPortfolios(token: String): List<InvestmentPortfolio> =
-        portfolioDao!!.findAllByOwner(
-            myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
-        )!!
 
-    //Основные функции
     fun getTransactions(portfolio: InvestmentPortfolio, currency: Currency): List<Transaction>{
         val transactions: List<CurrencyTransaction> = currencyTransactionDao!!
             .findByInvestmentPortfolioInCurrencyTransactionAndCurrencyInTransaction(
@@ -137,6 +129,7 @@ class CurrencyService{
     }
 
     fun getCurrencyInfo(id: String, token: String): CurrencyInfoDto {
+
         val curCurrency: Currency = getCurrency(id)
 
         val currentPrice: Double = getPrice(curCurrency.id_on_yahoo_api!!)
@@ -177,4 +170,9 @@ class CurrencyService{
             )
         }
     }
+
+    fun getPortfolios(token: String): List<InvestmentPortfolio> =
+        portfolioDao!!.findAllByOwner(
+            myUserDao!!.findByLogin(jwtUtil!!.extractUsername(token.substringAfter(' ')))!!
+        )!!
 }

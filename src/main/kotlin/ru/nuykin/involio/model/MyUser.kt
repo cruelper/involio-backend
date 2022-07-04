@@ -2,7 +2,6 @@ package ru.nuykin.involio.model
 
 import javax.persistence.*
 
-
 @Entity
 @Table(name = "table_user")
 class MyUser {

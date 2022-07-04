@@ -99,8 +99,10 @@ class PostConstructImpl {
         val brokers: List<String> = listOf("Тинькофф", "ВТБ", "Сбер", "БКС", "Interactive Brokers")
 
         brokerService!!.addBroker("Тинькофф", listOf(exchangeEntities["СПБ биржа"]!!, exchangeEntities["Московская биржа"]!!))
+        brokerService!!.addBroker("ВТБ", listOf(exchangeEntities["Московская биржа"]!!))
+        brokerService!!.addBroker("БКС", listOf(exchangeEntities["СПБ биржа"]!!, exchangeEntities["Московская биржа"]!!, exchangeEntities["NASDAQ"]!!, exchangeEntities["NYSE"]!!))
         brokerService!!.addBroker("Сбер", listOf(exchangeEntities["Московская биржа"]!!))
-        brokerService!!.addBroker("Interactive Brokers", listOf(exchangeEntities["NASDAQ"]!!, exchangeEntities["NYSE"]!!, exchangeEntities["NYSE"]!!))
+        brokerService!!.addBroker("Interactive Brokers", listOf(exchangeEntities["NASDAQ"]!!, exchangeEntities["NYSE"]!!, exchangeEntities["Франкфуртская фондовая биржа"]!!))
     }
 
     private fun addWorldIndicesAndIndicators(){
@@ -126,16 +128,33 @@ class PostConstructImpl {
         val exchangeEntities: Map<String, Exchange> = exchangeDto.map { Pair(it.key, exchangeService!!.getExchangeById(it.value)!!) }.toMap()
 
 
-        companyService!!.addOrUpdateCompany(Company("RU0009029540", "Сбер", "описание Сбера", rub,
+        companyService!!.addOrUpdateCompany(Company("RU0009029540", "Сбер", "Сбербанк – крупнейший банк в России и СНГ с самой широкой сетью подразделений, предлагающий весь спектр инвестиционно-банковских услуг.", rub,
             countryEntities["Россия"]!!, listOf(), listOf(sectorEntities["Финансы"]!!, sectorEntities["Информационные технологии"]!!))
         )
         stockService!!.addOrUpdateStock(StockDto("SBER", exchangeEntities["Московская биржа"]!!.id_exchange, "RU0009029540",
             rub.idCurrency!!, true, "SBER.ME"))
-        stockService!!.addOrUpdateStock(StockDto("SBNC", exchangeEntities["Франкфуртская фондовая биржа"]!!.id_exchange, "RU0009029540",
-            eur.idCurrency!!, true, "SBNC.F"))
 
+        companyService!!.addOrUpdateCompany(Company("RU0007661625", "Газпром", "«Газпром» — глобальная энергетическая компания. Основные направления деятельности — геологоразведка, добыча, транспортировка, хранени и переработка газа.", rub,
+            countryEntities["Россия"]!!, listOf(), listOf(sectorEntities["Финансы"]!!, sectorEntities["Коммунальные услуги"]!!, sectorEntities["Промышленность"]!!, sectorEntities["Энергетика"]!!))
+        )
+        stockService!!.addOrUpdateStock(StockDto("GAZP", exchangeEntities["Московская биржа"]!!.id_exchange, "RU0007661625",
+            rub.idCurrency!!, true, "GAZP.ME"))
 
-        companyService!!.addOrUpdateCompany(Company("NL0009805522", "Яндекс", "описание Яндекса", rub,
+        companyService!!.addOrUpdateCompany(Company("US69608A1088", "Palantir Technologies Inc", "Palantir Technologies - разрабатывает программное обеспечение для анализа всех типов информации информации.", rub,
+            countryEntities["США"]!!, listOf(), listOf(sectorEntities["Информационные технологии"]!!))
+        )
+        stockService!!.addOrUpdateStock(StockDto("PLTR", exchangeEntities["NYSE"]!!.id_exchange, "US69608A1088",
+            usd.idCurrency!!, true, "PLTR"))
+
+        companyService!!.addOrUpdateCompany(Company("DE000A1CSBR6", "Softline", "Softline — международная ИТ-компания, поставщик ИТ-решений и сервисов, работающий на рынках России, Европы, Азии и Америки.", rub,
+            countryEntities["Германия"]!!, listOf(), listOf(sectorEntities["Информационные технологии"]!!))
+        )
+        stockService!!.addOrUpdateStock(StockDto("SFTL", exchangeEntities["Московская биржа"]!!.id_exchange, "DE000A1CSBR6",
+            rub.idCurrency!!, true, "SFTL.ME"))
+        stockService!!.addOrUpdateStock(StockDto("SFD1", exchangeEntities["Франкфуртская фондовая биржа"]!!.id_exchange, "DE000A1CSBR6",
+            eur.idCurrency!!, true, "SFD1.DE"))
+
+        companyService!!.addOrUpdateCompany(Company("NL0009805522", "Яндекс", "«Яндекс» - российская ИТ-компания, владеющая одноименной системой поиска в Сети и интернет-порталом. Является лидером в России.", rub,
             countryEntities["Россия"]!!, listOf(), listOf(sectorEntities["Финансы"]!!, sectorEntities["Информационные технологии"]!!))
         )
         stockService!!.addOrUpdateStock(StockDto("YNDX", exchangeEntities["Московская биржа"]!!.id_exchange, "NL0009805522",
@@ -143,7 +162,7 @@ class PostConstructImpl {
         stockService!!.addOrUpdateStock(StockDto("YDX", exchangeEntities["Франкфуртская фондовая биржа"]!!.id_exchange, "NL0009805522",
             eur.idCurrency!!, true, "YDX.F"))
 
-        companyService!!.addOrUpdateCompany(Company("US0378331005", "Apple", "описание Apple", usd,
+        companyService!!.addOrUpdateCompany(Company("US0378331005", "Apple", "Apple Inc. - американская корпорация, производитель персональных и планшетных компьютеров, аудиоплееров, телефонов, программного обеспечения.", usd,
             countryEntities["США"]!!, listOf(), listOf(sectorEntities["Финансы"]!!, sectorEntities["Информационные технологии"]!!,
                 sectorEntities["Коммуникационные услуги"]!!))
         )
@@ -152,7 +171,7 @@ class PostConstructImpl {
         stockService!!.addOrUpdateStock(StockDto("AAPL", exchangeEntities["СПБ биржа"]!!.id_exchange, "US0378331005",
             usd.idCurrency!!, true, "AAPL"))
 
-        companyService!!.addOrUpdateCompany(Company("US5949181045", "Microsoft", "описание Microsoft", usd,
+        companyService!!.addOrUpdateCompany(Company("US5949181045", "Microsoft", "Microsoft Corporation разрабатывает, производит, лицензирует, продает и поддерживает программные продукты, а также игровые приставки.", usd,
             countryEntities["США"]!!, listOf(), listOf(sectorEntities["Информационные технологии"]!!, sectorEntities["Коммуникационные услуги"]!!))
         )
         stockService!!.addOrUpdateStock(StockDto("MSFT", exchangeEntities["NASDAQ"]!!.id_exchange, "US5949181045",
@@ -160,7 +179,7 @@ class PostConstructImpl {
         stockService!!.addOrUpdateStock(StockDto("MSFT", exchangeEntities["СПБ биржа"]!!.id_exchange, "US5949181045",
             usd.idCurrency!!, true, "MSFT"))
 
-        companyService!!.addOrUpdateCompany(Company("DE0007664005", "Volkswagen", "описание Volkswagen", eur,
+        companyService!!.addOrUpdateCompany(Company("DE0007664005", "Volkswagen", "Volkswagen AG производит бюджетные, элитные и спортивные автомобили, а также грузовики и коммерческий автотранспорт. ", eur,
             countryEntities["Германия"]!!, listOf(), listOf(sectorEntities["Промышленность"]!!))
         )
         stockService!!.addOrUpdateStock(StockDto("VOW3", exchangeEntities["Франкфуртская фондовая биржа"]!!.id_exchange, "DE0007664005",

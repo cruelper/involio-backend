@@ -50,6 +50,7 @@ data class StockInPortfolio(
     var ticker: String,
     var count: Int,
     var currentUnitPrice: Double,
+    var currencySign: String,
     var partOfPortfolio: Double,
     var changePrice: ChangePrice,
     var idExchange: Int,

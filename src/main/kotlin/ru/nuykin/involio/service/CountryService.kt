@@ -24,9 +24,9 @@ class CountryService{
         return if(country == null) null else CountryDto(country.id_country!!, country.name_country!!)
     }
 
-    fun addCountry(countryDto: CountryDto){
+    fun addCountry(countryDto: CountryDto): Country{
         val newCountry: Country = Country(name = countryDto.name)
-        countryDao!!.save(newCountry)
+        return countryDao!!.save(newCountry)
     }
 
     fun updateCountry(countryDto: CountryDto){
